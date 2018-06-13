@@ -196,3 +196,9 @@ I think that one significant pain point is the rather small number of contributo
 
 After looking at this dataset, it is clear that the data needs more treatment for consistency. I tried to focus my wrangling on two aspects of the street address: street type and directions, and even that brings lots of challenges. Possibly this is a consequence of the 'open' aspect from OpenStreetMaps, and with the time and contributions from users, the data may tend to be more consistent.
 
+
+### References ###
+
+- OpenStreetMap API: https://wiki.openstreetmap.org/wiki/Main_Page
+- MongoDB Documentation: https://docs.mongodb.com/manual/reference/
+- Canada Post Street Types: https://www.canadapost.ca/tools/pg/manual/PGaddress-e.asp#1441964
