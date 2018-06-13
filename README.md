@@ -12,7 +12,7 @@ Originally from Rio de Janeiro - Brazil, I moved to Toronto two years ago, and I
 
 As with any cities in Canada, the first challenge is the bilingual characteristics of the street names. Also, Toronto brings some extra challenges in this aspect: the various types of streets, named in English and French brings some complexity to the process.
 
-- As a starting point, I used the [list of Street Types from Canada Post](https://www.canadapost.ca/tools/pg/manual/PGaddress-e.asp#1441964). I added several others types, as I found them on the map. The final list can be seen in this file: [street_types.json](./street_types.json);
+- As a starting point, I used the [list of Street Types from Canada Post](https://www.canadapost.ca/tools/pg/manual/PGaddress-e.asp#1441964). I added several others types, as I found them on the map. The final list can be seen in this file: [expected_street_types.json](./expected_street_types.json);
 
 - As expected, the street types weren't consistent. 'Street' for instance, could be found in several formats ("St", "St.", "ST", "STREET", "st", "st.");
 
