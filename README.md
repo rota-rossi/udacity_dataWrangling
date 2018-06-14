@@ -31,6 +31,40 @@ I decided to use the `id` field from the entities, instead of letting MongoDB cr
 
 I chose to create two separate `JSON` files, and add all nodes that are part of a `way` as an array of `ids` inside the way. MongoDB does not enforce Foreign Key (FK) constraints, but it can use it for aggregations using the `$lookup` function.
 
+### Importing the data ###
+
+```
+$ mongoimport --jsonArray -d dataWrangling -c nodes toronto.osm_nodes.json
+$ mongoimport --jsonArray -d dataWrangling -c waystoronto.osm_ways.json
+```
+
+### Creating some indexes ###
+
+```
+> db.nodes.createIndex({amenity: 1});
+{
+        "createdCollectionAutomatically" : false,
+        "numIndexesBefore" : 1,
+        "numIndexesAfter" : 2,
+        "ok" : 1
+}
+> db.nodes.createIndex({"addr.street_type" : 1});
+{
+        "createdCollectionAutomatically" : false,
+        "numIndexesBefore" : 2,
+        "numIndexesAfter" : 3,
+        "ok" : 1
+}
+> db.nodes.createIndex({'coord': "2d"});
+{
+        "createdCollectionAutomatically" : false,
+        "numIndexesBefore" : 3,
+        "numIndexesAfter" : 4,
+        "ok" : 1
+}
+```
+The last index allows us to query near nodes based on coordinates.
+
 ### Files/Documents statistics ###
 
 File sizes: 
@@ -58,25 +92,25 @@ Database countings:
 
 ```
 > db.nodes.aggregate([
-...     {
-...         $match: {"addr.street_type": {$exists: true}}
-...     },
-...     {
-...         $group: {
-...             _id: "$addr.street_type",
-...             count: {$sum: 1},
-...         }
-...     },
-...     {
-...         $sort: {count: -1}
-...     },
-...     {
-...         $limit: 10
-...     }
-... ])
+     {
+         $match: {"addr.street_type": {$exists: true}}
+     },
+     {
+         $group: {
+             _id: "$addr.street_type",
+             count: {$sum: 1},
+         }
+     },
+     {
+         $sort: {count: -1}
+     },
+     {
+         $limit: 10
+     }
+ ])
 ```
 ```
-{ "_id" : "Avenue", "count" : 58996 }
+{ "_id" : "Avenue", "count" : 58998 }
 { "_id" : "Drive", "count" : 54459 }
 { "_id" : "Road", "count" : 52037 }
 { "_id" : "Street", "count" : 39126 }
@@ -92,22 +126,22 @@ Database countings:
 
 ```
 > db.nodes.aggregate([
-...     {
-...         $match: {"amenity": {$exists: true}}
-...     },
-...     {
-...         $group: {
-...             _id: "$amenity",
-...             count: {$sum: 1},
-...         }
-...     },
-...     {
-...         $sort: {count: -1}
-...     },
-...     {
-...         $limit: 10
-...     }
-... ])
+     {
+         $match: {"amenity": {$exists: true}}
+     },
+     {
+         $group: {
+             _id: "$amenity",
+             count: {$sum: 1},
+         }
+     },
+     {
+         $sort: {count: -1}
+     },
+     {
+         $limit: 10
+     }
+ ])
 ```
 
 ```
@@ -126,17 +160,54 @@ Database countings:
 ### Pharmacy Chains ###
 ```
 > db.nodes.aggregate([
-...     {$match: {amenity: 'pharmacy'}},
-...     {$group: {_id: '$name', count: {$sum:1}}},
-...     {$sort: {count: -1}},
-...     {$limit: 3}
-...     ]);
+     {$match: {amenity: 'pharmacy'}},
+     {$group: {_id: '$name', count: {$sum:1}}},
+     {$sort: {count: -1}},
+     {$limit: 3}
+     ]);
 ```
 
 ```
 { "_id" : "Shoppers Drug Mart", "count" : 179 }
 { "_id" : "Rexall", "count" : 27 }
 { "_id" : "Main Drug Mart", "count" : 24 }
+```
+
+### Nearest Pharmacies ###
+
+```
+db.nodes.aggregate([
+        {
+            $geoNear: {
+                 near :[ -79.3756055, 43.6576206 ],
+                 limit: 10,
+                 distanceField: "distance",
+                 query: { 
+                     "amenity": "pharmacy"                 },
+            }
+         },
+         {
+           $project: {
+             name: 1,
+             distance: 1,
+             opening_hours: 1,
+             dispensing: 1,
+             operator: 1
+           }
+         }
+]);
+```
+```
+{ "_id" : "2684472465", "dispensing" : "yes", "name" : "Metro Drugs", "distance" : 0.0012440935053239502 }
+{ "_id" : "388480633", "name" : "Shoppers Drug Mart", "dispensing" : "yes", "operator" : "Loblaw Companies Limited", "distance" : 0.005160147511451324 }
+{ "_id" : "380037489", "dispensing" : "yes", "opening_hours" : "Mo-Fr 09:00-18:00", "name" : "pharmacy.ca", "distance" : 0.0051688899427292335 }
+{ "_id" : "281361616", "name" : "Guardian Drugs Greendale", "dispensing" : "yes", "distance" : 0.005444986689609379 }
+{ "_id" : "1907371546", "name" : "Shoppers Drug Mart", "dispensing" : "yes", "operator" : "Loblaw Companies Limited", "distance" : 0.006542185125021131 }
+{ "_id" : "281669588", "name" : "Rexall", "dispensing" : "yes", "opening_hours" : "Mo-Su 07:00-22:00", "distance" : 0.006550734982427416 }
+{ "_id" : "380036466", "dispensing" : "yes", "name" : "Main Drug Mart", "distance" : 0.007246892730680797 }
+{ "_id" : "1113727967", "name" : "Rexall", "distance" : 0.007434889576171568 }
+{ "_id" : "775896239", "name" : "Shoppers Drug Mart", "dispensing" : "yes", "opening_hours" : "Mo-Fr 7:00-18:30", "operator" : "Loblaw Companies Limited", "distance" : 0.007568906111848219 }
+{ "_id" : "519728535", "name" : "Pharmamart", "distance" : 0.007870411456838235 }
 ```
 
 ### Total and Top Contributors ###
@@ -192,9 +263,35 @@ We can see the most of contributions (~55% of total) are made by a single user, 
 
 I think that one significant pain point is the rather small number of contributors (around 2000). For a large city like Toronto, we could have a lot more. Maybe integrating with some mapping tools (like Waze, Google Maps, Apple Maps), or even 'geographical games' (like Pokemon Go or Geocaching) can increase the number of contributors, without requiring that they actively add/edit elements in the maps.
 
+### Other ideas ###
+
+Sometimes you have a need for an urgent medicin that you are a regular user - or even your walk-in doctor asked you to take it as soon as possible. Current some pharmacies have the `opening_hours` field, but this field is not structured, and quite hard to process. One useful information about the pharmacies would be to know which ones are open 24h, in a structured, boolean field. 
+
+An example query would be:
+
+```
+db.nodes.aggregate([
+        {
+            $geoNear: {
+                 near :[ -79.3756055, 43.6576206 ],
+                 limit: 20,
+                 distanceField: "distance",
+                 query: { 
+                     "amenity": "pharmacy",
+                     "24h" : true
+                 },
+            }
+         }
+]);
+```
+This query would show the nearest 20 pharmacies that are open 24h.
+
+
 ### Conclusion ###
 
 After looking at this dataset, it is clear that the data needs more treatment for consistency. I tried to focus my wrangling on two aspects of the street address: street type and directions, and even that brings lots of challenges. Possibly this is a consequence of the 'open' aspect from OpenStreetMaps, and with the time and contributions from users, the data may tend to be more consistent.
+
+We evaluated some amenities, in special the pharmacies, and we could see that some of them have the opening hours information - unfortunately, this information is in a rather unstructured format. One improvement could be making this field a structured one, or at least adding the information if the pharmacy is 24h as a boolean field.
 
 
 ### References ###
